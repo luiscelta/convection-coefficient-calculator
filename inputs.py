@@ -223,8 +223,8 @@ def getInputs1(menu, fluids):
     return inputs1Dict
 
 
-inputs1Dict = getInputs1(menu, fluids)
-print(inputs1Dict)
+
+
 
 
 
@@ -345,10 +345,10 @@ parameters = {
                                                                "fluid velocity": None},
     ("Forced convection", "External", "Cross-flow tube bundle", "Square pitch"): {"temperatures": {"fluid": None, "surface": None},
                                                                "characteristic length": {"outer diameter": None, "x1": None, "result": lambda d: d["outer diameter"]},
-                                                               "fluid velocity": {"inlet velocity": None, "max velocity": None}},
+                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"}},
     ("Forced convection", "External", "Cross-flow tube bundle", "Triangular pitch"): {"temperatures": {"fluid": None, "surface": None},
                                                                "characteristic length": {"outer diameter": None, "x1": None, "x2": None, "x3": None, "result": lambda d: d["outer diameter"]},
-                                                               "fluid velocity": {"inlet velocity": None, "max velocity": None}},
+                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"}},
     ("Natural condensation", None, "Vertical flat surface", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]}},
     ("Natural condensation", None, "Inclined flat surface", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
@@ -384,7 +384,7 @@ parameters = {
 }
 
 
-data2Dict = parameters[key] # en "key" irá la tupla correspondiente
+
 
 
 def getFilmTemperature(d):
@@ -434,3 +434,35 @@ def getMaxVelocityTriangularTubeBundle(d):
     d["fluid velocity"]["max velocity"] = v_max
 
 
+
+inputs1Dict = getInputs1(menu, fluids)
+keyTupleInputs = (inputs1Dict["flow type"], inputs1Dict["domain type"], inputs1Dict["geometry1 type"], inputs1Dict["geometry2 type"])
+data2Dict = parameters[keyTupleInputs] 
+
+def getInputs2(data2Dict):
+    for key, value in data2Dict.items():
+        if isinstance(value, dict):
+            print(f"\n  {key}:")
+            for subKey, subValue in value.items():
+                if subValue is None:
+                    while True:
+                        try:
+                            value[subKey] = float(input(f"    {subKey}: "))
+                            break
+                        except ValueError:
+                            print("    Invalid input.")
+        elif value is None:
+            while True:
+                try:
+                    data2Dict[key] = float(input(f"\n  {key}: "))
+                    break
+                except ValueError:
+                    print("  Invalid input.")
+
+
+    return data2Dict
+
+
+inputs2Dict = getInputs2(data2Dict)
+print(inputs1Dict)
+print(inputs2Dict)
