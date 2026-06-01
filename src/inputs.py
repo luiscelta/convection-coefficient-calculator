@@ -224,7 +224,35 @@ def getInputs1(menu, fluids):
 
 
 
+def getMaxVelocitySquareTubeBundle(d):
+    
+    inletVelocity = d["fluid velocity"]["inlet velocity"]
+    outerDiameter = d["characteristic length"]["outer diameter"]
+    x1 = d["characteristic length"]["x1"]
+    
+    # Operación matemática limpia
+    v_max = inletVelocity * (x1 / (x1 - outerDiameter))
+    
+    # Guardamos el resultado en su sitio
+    d["fluid velocity"]["max velocity"] = v_max
+    
 
+def getMaxVelocityTriangularTubeBundle(d):
+    
+    inletVelocity = d["fluid velocity"]["inlet velocity"]
+    outerDiameter = d["characteristic length"]["outer diameter"]
+    x1 = d["characteristic length"]["x1"]
+    x3 = d["characteristic length"]["x3"]
+
+    if 2 * (x3 - outerDiameter) >= x1 - outerDiameter:
+        v_max = inletVelocity * x1 / (x1 - outerDiameter)
+    
+    else:
+        v_max = inletVelocity * x1 / (2 * (x3 - outerDiameter))
+
+    
+    # Guardamos el resultado en su sitio
+    d["fluid velocity"]["max velocity"] = v_max
 
 
 
@@ -345,10 +373,12 @@ parameters = {
                                                                "fluid velocity": None},
     ("Forced convection", "External", "Cross-flow tube bundle", "Square pitch"): {"temperatures": {"fluid": None, "surface": None},
                                                                "characteristic length": {"outer diameter": None, "x1": None, "result": lambda d: d["outer diameter"]},
-                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"}},
+                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"},
+                                                               "calculate": [getMaxVelocitySquareTubeBundle]},
     ("Forced convection", "External", "Cross-flow tube bundle", "Triangular pitch"): {"temperatures": {"fluid": None, "surface": None},
                                                                "characteristic length": {"outer diameter": None, "x1": None, "x2": None, "x3": None, "result": lambda d: d["outer diameter"]},
-                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"}},
+                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"},
+                                                               "calculate": [getMaxVelocityTriangularTubeBundle]},
     ("Natural condensation", None, "Vertical flat surface", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]}},
     ("Natural condensation", None, "Inclined flat surface", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
@@ -387,54 +417,6 @@ parameters = {
 
 
 
-def getFilmTemperature(d):
-    val = d["temperatures"]["film"]                 # 1. Atrapamos la función lambda
-    d["temperatures"]["film"] = val(d["temperatures"])
-
-
-def getMeanTemperature(d):
-    val = d["temperatures"]["mean"]                 # 1. Atrapamos la función lambda
-    d["temperatures"]["mean"] = val(d["temperatures"])
-
-
-def getCharacteristicLength(d):
-    val = d["characteristic length"]["result"]                 # 1. Atrapamos la función lambda
-    d["characteristic length"]["result"] = val(d["characteristic length"])    # 3. ¡Aquí ocurre la magia! Sobrescribimos la lambda con el número
-    
-
-
-def getMaxVelocitySquareTubeBundle(d):
-    
-    inletVelocity = d["fluid velocity"]["inlet velocity"]
-    outerDiameter = d["characteristic length"]["outer diameter"]
-    x1 = d["characteristic length"]["x1"]
-    
-    # Operación matemática limpia
-    v_max = inletVelocity * (x1 / (x1 - outerDiameter))
-    
-    # Guardamos el resultado en su sitio
-    d["fluid velocity"]["max velocity"] = v_max
-    
-
-def getMaxVelocityTriangularTubeBundle(d):
-    
-    inletVelocity = d["fluid velocity"]["inlet velocity"]
-    outerDiameter = d["characteristic length"]["outer diameter"]
-    x1 = d["characteristic length"]["x1"]
-    x3 = d["characteristic length"]["x3"]
-
-    if 2 * (x3 - outerDiameter) >= x1 - outerDiameter:
-        v_max = inletVelocity * x1 / (x1 - outerDiameter)
-    
-    else:
-        v_max = inletVelocity * x1 / (2 * (x3 - outerDiameter))
-
-    
-    # Guardamos el resultado en su sitio
-    d["fluid velocity"]["max velocity"] = v_max
-
-
-
 inputs1Dict = getInputs1(menu, fluids)
 keyTupleInputs = (inputs1Dict["flow type"], inputs1Dict["domain type"], inputs1Dict["geometry1 type"], inputs1Dict["geometry2 type"])
 data2Dict = parameters[keyTupleInputs] 
@@ -458,6 +440,19 @@ def getInputs2(data2Dict):
                     break
                 except ValueError:
                     print("  Invalid input.")
+
+    
+     # 2. Calcular lambdas automáticamente
+    for key, value in data2Dict.items():
+        if isinstance(value, dict):
+            for subKey, subValue in value.items():
+                if callable(subValue):
+                    value[subKey] = subValue(value)
+
+    
+    if "calculate" in data2Dict:
+        for function in data2Dict["calculate"]:
+            function(data2Dict)
 
 
     return data2Dict
