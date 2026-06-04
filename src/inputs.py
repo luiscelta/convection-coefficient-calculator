@@ -1,3 +1,6 @@
+from math import cos, sin, radians
+
+
 menu = {
     1: {
         "flow type": "Natural convection",
@@ -255,13 +258,38 @@ def getMaxVelocityTriangularTubeBundle(d):
     d["fluid velocity"]["max velocity"] = v_max
 
 
+def getCriticalRayleighNarrows(d):
+    d["regime ranges"]["chimney"][1] = d["characteristic length"]["length"] / d["characteristic length"]["result"]
+
+
+
+def getCriticalRayleighCavities(d):
+    d["regime ranges"]["regime1"][1] = 1708 / cos(radians(d["angle"]))
+    d["regime ranges"]["regime2"]["rayleigh"][0] = 1708 / cos(radians(d["angle"]))
+    d["regime ranges"]["regime3"]["rayleigh"][0] = 1708 / cos(radians(d["angle"]))
+
+
+def getCriticalAngleCavities(d):
+    criticalAngleDict = {"1": 25, "3": 53, "6": 60, "12": 67, ">12": 70}
+    quotient = d["characteristic length"]["length"] / d["characteristic length"]["result"]
+    def getClosestValue(value):
+        if value > 12:
+            return ">12"
+        options = [1, 3, 6, 12]
+        return min(options, key=lambda x: abs(value - x))
+    aproxQuotient = str(getClosestValue(quotient))
+    d["regime ranges"]["regime2"]["angle"][1] = criticalAngleDict[aproxQuotient]
+    d["regime ranges"]["regime3"]["angle"][0] = criticalAngleDict[aproxQuotient]
+    
+
+
 
 
 
 
 parameters = {
     ("Natural convection", "Internal", "Narrow vertical duct", "Parallel plates"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "separation": None, "result": lambda d: 2 * d["separation"]}},
+                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]}},
     ("Natural convection", "Internal", "Narrow vertical duct", "Circular"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]}},
     ("Natural convection", "Internal", "Narrow vertical duct", "Squared"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
