@@ -30,7 +30,13 @@ menu = {
                 "submenu": {
                     1: {"geometry1 type": "Vertical flat plate"},
                     2: {"geometry1 type": "Inclined flat plate"},
-                    3: {"geometry1 type": "Horizontal flat plate"},
+                    3: {
+                        "geometry1 type": "Horizontal flat plate",
+                        "submenu": {
+                            1: {"geometry2 type": "Hot top surface or cold bottom surface"},
+                            2: {"geometry2 type": "Cold top surface or hot bottom surface"},
+                        }
+                    },
                     4: {"geometry1 type": "Sphere"},
                     5: {"geometry1 type": "Vertical cylinder"},
                     6: {"geometry1 type": "Inclined cylinder"},
@@ -50,14 +56,27 @@ menu = {
                     2: {
                         "geometry1 type": "Non-circular duct",
                         "submenu": {
-                            1: {"geometry2 type": "Triangular"},
-                            2: {"geometry2 type": "Rectangular (a/b = 1)"},
-                            3: {"geometry2 type": "Rectangular (a/b = 1.43)"},
-                            4: {"geometry2 type": "Rectangular (a/b = 2)"},
-                            5: {"geometry2 type": "Rectangular (a/b = 3)"},
-                            6: {"geometry2 type": "Rectangular (a/b = 4)"},
-                            7: {"geometry2 type": "Rectangular (a/b = 8)"},
-                            8: {"geometry2 type": "Rectangular (a/b >> 8)"},
+                            1: {
+                                "geometry2 type": "Triangular",
+                                "submenu": {
+                                    1: {"subtype": "Constant temperature"},
+                                    2: {"subtype": "Constant heat flow"},
+                                }
+                            },
+                            2: {
+                                "geometry2 type": "Squared",
+                                "submenu": {
+                                    1: {"subtype": "Constant temperature"},
+                                    2: {"subtype": "Constant heat flow"},
+                                }
+                            },
+                            3: {
+                                "geometry2 type": "Rectangular",
+                                "submenu": {
+                                    1: {"subtype": "Constant temperature"},
+                                    2: {"subtype": "Constant heat flow"},
+                                }
+                            },
                         }
                     },
                     3: {"geometry1 type": "Between parallel planes"},
@@ -112,7 +131,8 @@ menu = {
                 "submenu": {
                     1: {"geometry2 type": "Strip"},
                     2: {"geometry2 type": "Disk"},
-                    3: {"geometry2 type": "Other"},
+                    3: {"geometry2 type": "Other strip"},
+                    4: {"geometry2 type": "Other disk"},
                 }
             },
             4: {"geometry1 type": "Vertical cylinder"},
@@ -182,11 +202,12 @@ def getInputs1(menu, fluids):
         "domain type": None,
         "geometry1 type": None,
         "geometry2 type": None,
+        "subtype": None,
         "fluid": None
     }
 
     current = menu
-    levelKeys = ["flow type", "domain type", "geometry1 type", "geometry2 type"]
+    levelKeys = ["flow type", "domain type", "geometry1 type", "geometry2 type", "subtype"]
 
     while True:
         firstItem = next(iter(current.values()))
@@ -226,219 +247,161 @@ def getInputs1(menu, fluids):
     return inputs1Dict
 
 
-
-def getMaxVelocitySquareTubeBundle(d):
     
-    inletVelocity = d["fluid velocity"]["inlet velocity"]
-    outerDiameter = d["characteristic length"]["outer diameter"]
-    x1 = d["characteristic length"]["x1"]
-    
-    # Operación matemática limpia
-    v_max = inletVelocity * (x1 / (x1 - outerDiameter))
-    
-    # Guardamos el resultado en su sitio
-    d["fluid velocity"]["max velocity"] = v_max
-    
-
-def getMaxVelocityTriangularTubeBundle(d):
-    
-    inletVelocity = d["fluid velocity"]["inlet velocity"]
-    outerDiameter = d["characteristic length"]["outer diameter"]
-    x1 = d["characteristic length"]["x1"]
-    x3 = d["characteristic length"]["x3"]
-
-    if 2 * (x3 - outerDiameter) >= x1 - outerDiameter:
-        v_max = inletVelocity * x1 / (x1 - outerDiameter)
-    
-    else:
-        v_max = inletVelocity * x1 / (2 * (x3 - outerDiameter))
-
-    
-    # Guardamos el resultado en su sitio
-    d["fluid velocity"]["max velocity"] = v_max
-
-
-def getCriticalRayleighNarrows(d):
-    d["regime ranges"]["chimney"][1] = d["characteristic length"]["length"] / d["characteristic length"]["result"]
-
-
-
-def getCriticalRayleighCavities(d):
-    d["regime ranges"]["regime1"][1] = 1708 / cos(radians(d["angle"]))
-    d["regime ranges"]["regime2"]["rayleigh"][0] = 1708 / cos(radians(d["angle"]))
-    d["regime ranges"]["regime3"]["rayleigh"][0] = 1708 / cos(radians(d["angle"]))
-
-
-def getCriticalAngleCavities(d):
-    criticalAngleDict = {"1": 25, "3": 53, "6": 60, "12": 67, ">12": 70}
-    quotient = d["characteristic length"]["length"] / d["characteristic length"]["result"]
-    def getClosestValue(value):
-        if value > 12:
-            return ">12"
-        options = [1, 3, 6, 12]
-        return min(options, key=lambda x: abs(value - x))
-    aproxQuotient = str(getClosestValue(quotient))
-    d["regime ranges"]["regime2"]["angle"][1] = criticalAngleDict[aproxQuotient]
-    d["regime ranges"]["regime3"]["angle"][0] = criticalAngleDict[aproxQuotient]
-    
-
-
-
-
 
 
 parameters = {
-    ("Natural convection", "Internal", "Narrow vertical duct", "Parallel plates"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]}},
-    ("Natural convection", "Internal", "Narrow vertical duct", "Circular"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]}},
-    ("Natural convection", "Internal", "Narrow vertical duct", "Squared"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]}},
-    ("Natural convection", "Internal", "Narrow vertical duct", "Equilateral triangle"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]}},
-    ("Natural convection", "Internal", "Vertical rectangular cavity", None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
+    ("Natural convection", "Internal", "Narrow vertical duct", "Parallel plates", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+                                                               "coefficient": 1/192},
+    ("Natural convection", "Internal", "Narrow vertical duct", "Circular", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+                                                               "coefficient": 1/128},
+    ("Natural convection", "Internal", "Narrow vertical duct", "Squared", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+                                                               "coefficient": 1/113.6},
+    ("Natural convection", "Internal", "Narrow vertical duct", "Equilateral triangle", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+                                                               "coefficient": 1/106.4},
+    ("Natural convection", "Internal", "Vertical rectangular cavity", None, None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
                                                                "characteristic length": {"length": None, "width": None, "result": lambda d: d["width"]}},
-    ("Natural convection", "Internal", "Inclined rectangular cavity", None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
+    ("Natural convection", "Internal", "Inclined rectangular cavity", None, None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
                                                                "characteristic length": {"length": None, "width": None, "result": lambda d: d["width"]},
                                                                "angle": None},
-    ("Natural convection", "Internal", "Horizontal rectangular cavity", None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
+    ("Natural convection", "Internal", "Horizontal rectangular cavity", None, None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
                                                                "characteristic length": {"length": None, "width": None, "result": lambda d: d["width"]},
                                                                "top surface": None,
-                                                               "bottom surface": None},
-    ("Natural convection", "Internal", "Spherical cavity", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "angle": 0},
+    ("Natural convection", "Internal", "Spherical cavity", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]}},
-    ("Natural convection", "Internal", "Concentric cylinders", None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
+    ("Natural convection", "Internal", "Concentric cylinders", None, None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
                                                                "characteristic length": {"inner diameter": None, "outer diameter": None, "result": lambda d: (d["outer diameter"] - d["inner diameter"]) / 2}},
-    ("Natural convection", "Internal", "Concentric spheres", None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
+    ("Natural convection", "Internal", "Concentric spheres", None, None): {"temperatures": {"surface 1": None, "surface 2": None, "mean": lambda d: (d["surface 1"] + d["surface 2"]) / 2},
                                                                "characteristic length": {"inner diameter": None, "outer diameter": None, "result": lambda d: (d["outer diameter"] - d["inner diameter"]) / 2}},
-    ("Natural convection", "External", "Vertical flat plate", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural convection", "External", "Vertical flat plate", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]}},
-    ("Natural convection", "External", "Inclined flat plate", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural convection", "External", "Inclined flat plate", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]},
                                                                "angle": None},
-    ("Natural convection", "External", "Horizontal flat plate", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural convection", "External", "Horizontal flat plate", "Hot top surface or cold bottom surface", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"area": None, "perimeter": None, "result": lambda d: d["area"] / d["perimeter"]}},
-    ("Natural convection", "External", "Sphere", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural convection", "External", "Horizontal flat plate", "Cold top surface or hot bottom surface", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"area": None, "perimeter": None, "result": lambda d: d["area"] / d["perimeter"]}},
+    ("Natural convection", "External", "Sphere", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]}},
-    ("Natural convection", "External", "Vertical cylinder", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural convection", "External", "Vertical cylinder", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "diameter": None, "result": lambda d: d["length"]}},
-    ("Natural convection", "External", "Inclined cylinder", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural convection", "External", "Inclined cylinder", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "diameter": None, "result": lambda d: d["length"]},
                                                                "angle": None},
-    ("Natural convection", "External", "Horizontal cylinder", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural convection", "External", "Horizontal cylinder", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]}},
-    ("Forced convection", "Internal", "Circular duct", None): {"temperatures": {"fluid": None, "surface": None},
-                                                               "characteristic length": {"inner diameter": None, "result": lambda d: d["inner diameter"]},
+    ("Forced convection", "Internal", "Circular duct", None, None): {"temperatures": {"fluid": None, "surface": None},
+                                                               "characteristic length": {"length": None, "inner diameter": None, "result": lambda d: d["inner diameter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Triangular"): {"temperatures": {"fluid": None},
+    ("Forced convection", "Internal", "Non-circular duct", "Triangular", "Constant temperature"): {"temperatures": {"fluid": None},
                                                                "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Rectangular (a/b = 1)"):  {"temperatures": {"fluid": None},
+    ("Forced convection", "Internal", "Non-circular duct", "Triangular", "Constant heat flow"): {"temperatures": {"fluid": None},
                                                                "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Rectangular (a/b = 1.43)"):  {"temperatures": {"fluid": None},
+    ("Forced convection", "Internal", "Non-circular duct", "Squared", "Constant temperature"): {"temperatures": {"fluid": None},
                                                                "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Rectangular (a/b = 2)"):  {"temperatures": {"fluid": None},
+    ("Forced convection", "Internal", "Non-circular duct", "Squared", "Constant heat flow"): {"temperatures": {"fluid": None},
                                                                "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Rectangular (a/b = 3)"):  {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+    ("Forced convection", "Internal", "Non-circular duct", "Rectangular", "Constant temperature"): {"temperatures": {"fluid": None},
+                                                               "characteristic length": {"long side": None, "short side": None, "ratio": lambda d: d["long side"] / d["short side"], "area": lambda d: d["long side"] * d["short side"], "perimeter": lambda d: 2 * d["long side"] + 2 * d["short side"], "result": lambda d: 4 * d["area"] / d["perimeter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Rectangular (a/b = 4)"):  {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+    ("Forced convection", "Internal", "Non-circular duct", "Rectangular", "Constant heat flow"): {"temperatures": {"fluid": None},
+                                                               "characteristic length": {"long side": None, "short side": None, "ratio": lambda d: d["long side"] / d["short side"], "area": lambda d: d["long side"] * d["short side"], "perimeter": lambda d: 2 * d["long side"] + 2 * d["short side"], "result": lambda d: 4 * d["area"] / d["perimeter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Rectangular (a/b = 8)"):  {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+    ("Forced convection", "Internal", "Between parallel planes", None, None): {"temperatures": {"fluid": None},
+                                                               "characteristic length": {"length": None, "separation": None, "result": lambda d: 2 * d["separation"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Non-circular duct", "Rectangular (a/b >> 8)"):  {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"area": None, "perimeter": None, "result": lambda d: 4 * d["area"] / d["perimeter"]},
+    ("Forced convection", "Internal", "Annular duct", "Inner heat flow", None): {"temperatures": {"fluid": None},
+                                                               "characteristic length": {"length": None, "inner diameter": None, "outer diameter": None, "result": lambda d: d["outer diameter"] - d["inner diameter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Between parallel planes", None):  {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"separation": None, "result": lambda d: 2 * d["separation"]},
+    ("Forced convection", "Internal", "Annular duct", "Outer heat flow", None): {"temperatures": {"fluid": None},
+                                                               "characteristic length": {"length": None, "inner diameter": None, "outer diameter": None, "result": lambda d: d["outer diameter"] - d["inner diameter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Annular duct", "Inner heat flow"): {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"duct length": None,"inner diameter": None, "outer diameter": None, "result": lambda d: d["outer diameter"] - d["inner diameter"]},
+    ("Forced convection", "Internal", "Annular duct", "Inner-outer heat flow", None): {"temperatures": {"fluid": None},
+                                                               "characteristic length": {"length": None, "inner diameter": None, "outer diameter": None, "result": lambda d: d["outer diameter"] - d["inner diameter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "Internal", "Annular duct", "Outer heat flow"): {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"duct length": None,"inner diameter": None, "outer diameter": None, "result": lambda d: d["outer diameter"] - d["inner diameter"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "Internal", "Annular duct", "Inner-outer heat flow"): {"temperatures": {"fluid": None},
-                                                               "characteristic length": {"duct length": None,"inner diameter": None, "outer diameter": None, "result": lambda d: d["outer diameter"] - d["inner diameter"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "Internal", "Helical coil", None): {"temperatures": {"fluid": None, "surface": None},
+    ("Forced convection", "Internal", "Helical coil", None, None): {"temperatures": {"fluid": None, "surface": None},
                                                                "characteristic length": {"inner diameter": None, "coil diameter": None, "result": lambda d: d["inner diameter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "External", "Flat plate", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"plate length": None, "result": lambda d: d["plate length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Cylinders with perpendicular flow", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Forced convection", "External", "Flat plate", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "External", "Other geometries with perpendicular flow", "Square (face oriented)"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Other geometries with perpendicular flow", "Square (arist oriented)"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Other geometries with perpendicular flow", "Hexagon (face oriented)"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Other geometries with perpendicular flow", "Hexagon (arist oriented)"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Other geometries with perpendicular flow", "Rectangle (face oriented)"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Other geometries with perpendicular flow", "Ellipse (wide surface oriented)"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Other geometries with perpendicular flow", "Ellipse (narrow surface oriented)"): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
-                                                               "fluid velocity": None},
-    ("Forced convection", "External", "Sphere", None): {"temperatures": {"fluid": None, "surface": None},
+    ("Forced convection", "External", "Cylinders with perpendicular flow", None, None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]},
                                                                "fluid velocity": None},
-    ("Forced convection", "External", "Cross-flow tube bundle", "Square pitch"): {"temperatures": {"fluid": None, "surface": None},
+    ("Forced convection", "External", "Other geometries with perpendicular flow", "Square (face oriented)", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Other geometries with perpendicular flow", "Square (arist oriented)", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Other geometries with perpendicular flow", "Hexagon (face oriented)", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Other geometries with perpendicular flow", "Hexagon (arist oriented)", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Other geometries with perpendicular flow", "Rectangle (face oriented)", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Other geometries with perpendicular flow", "Ellipse (wide surface oriented)", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Other geometries with perpendicular flow", "Ellipse (narrow surface oriented)", None): {"temperatures": {"fluid": None, "surface": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Sphere", None, None): {"temperatures": {"fluid": None, "surface": None},
+                                                               "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]},
+                                                               "fluid velocity": None},
+    ("Forced convection", "External", "Cross-flow tube bundle", "Square pitch", None): {"temperatures": {"fluid": None, "surface": None},
                                                                "characteristic length": {"outer diameter": None, "x1": None, "result": lambda d: d["outer diameter"]},
-                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"},
-                                                               "calculate": [getMaxVelocitySquareTubeBundle]},
-    ("Forced convection", "External", "Cross-flow tube bundle", "Triangular pitch"): {"temperatures": {"fluid": None, "surface": None},
+                                                               "fluid velocity": {"inlet velocity": None},
+                                                               "number of columns": None},
+    ("Forced convection", "External", "Cross-flow tube bundle", "Triangular pitch", None): {"temperatures": {"fluid": None, "surface": None},
                                                                "characteristic length": {"outer diameter": None, "x1": None, "x2": None, "x3": None, "result": lambda d: d["outer diameter"]},
-                                                               "fluid velocity": {"inlet velocity": None, "max velocity": "calculated"},
-                                                               "calculate": [getMaxVelocityTriangularTubeBundle]},
-    ("Natural condensation", None, "Vertical flat surface", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "fluid velocity": {"inlet velocity": None},
+                                                               "number of columns": None},
+    ("Natural condensation", None, "Vertical flat surface", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]}},
-    ("Natural condensation", None, "Inclined flat surface", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural condensation", None, "Inclined flat surface", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]},
                                                                "angle": None},
-    ("Natural condensation", None, "Horizontal flat surface", "Strip"): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural condensation", None, "Horizontal flat surface", "Strip", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"length": None, "result": lambda d: d["length"]}},
-    ("Natural condensation", None, "Horizontal flat surface", "Disk"): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural condensation", None, "Horizontal flat surface", "Disk", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]}},
-    ("Natural condensation", None, "Horizontal flat surface", "Other"): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural condensation", None, "Horizontal flat surface", "Other strip", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"area": None, "perimeter": None, "result": lambda d: d["area"] / d["perimeter"]}},
-    ("Natural condensation", None, "Vertical cylinder", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
-                                                               "characteristic length": {"length": None, "result": lambda d: d["length"]}},
-    ("Natural condensation", None, "Inclined cylinder", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural condensation", None, "Horizontal flat surface", "Other disk", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"area": None, "perimeter": None, "result": lambda d: d["area"] / d["perimeter"]}},
+    ("Natural condensation", None, "Vertical cylinder", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "characteristic length": {"diameter": None, "length": None, "result": lambda d: d["length"]}},
+    ("Natural condensation", None, "Inclined cylinder", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]},
                                                                "angle": None},
-    ("Natural condensation", None, "Horizontal cylinder", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural condensation", None, "Horizontal cylinder", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]}},
-    ("Natural condensation", None, "Horizontal tube bundle", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Natural condensation", None, "Horizontal tube bundle", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]},
-                                                               "number of tubes": None},
-    ("Natural condensation", None, "Sphere", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+                                                               "number of rows": None},
+    ("Natural condensation", None, "Sphere", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]}},
-    ("Forced condensation", "Internal", "Circular duct", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Forced condensation", "Internal", "Circular duct", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]},
                                                                "inlet vapor velocity": None,
                                                                "vapor quality": {"inlet": None, "outlet": None}},
-    ("Forced condensation", "External", "Horizontal cylinder", None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
+    ("Forced condensation", "External", "Horizontal cylinder", None, None): {"temperatures": {"fluid": None, "surface": None, "saturation": None, "film": lambda d: (d["fluid"] + d["surface"]) / 2},
                                                                "characteristic length": {"diameter": None, "result": lambda d: d["diameter"]},
-                                                               "vapor velocity": None}
-    # ("Natural boiling", None, None, None): None,
-    # ("Forced boiling", None, None, None): None,
+                                                               "vapor velocity": None},
 }
 
 
@@ -474,10 +437,6 @@ def getInputs2(data2Dict):
                 if callable(subValue):
                     value[subKey] = subValue(value)
 
-    
-    if "calculate" in data2Dict:
-        for function in data2Dict["calculate"]:
-            function(data2Dict)
 
 
     return data2Dict
@@ -486,7 +445,7 @@ def getInputs2(data2Dict):
 
 if __name__ == "__main__":
     inputs1Dict = getInputs1(menu, fluids)
-    keyTupleInputs = (inputs1Dict["flow type"], inputs1Dict["domain type"], inputs1Dict["geometry1 type"], inputs1Dict["geometry2 type"])
+    keyTupleInputs = (inputs1Dict["flow type"], inputs1Dict["domain type"], inputs1Dict["geometry1 type"], inputs1Dict["geometry2 type"], inputs1Dict["subtype"])
     data2Dict = parameters[keyTupleInputs] 
     inputs2Dict = getInputs2(data2Dict)
     print(inputs1Dict)
