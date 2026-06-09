@@ -196,6 +196,36 @@ fluids = {
 }
 
 
+
+fluidPairs = {
+    "Water (saturated liquid)": "Water (saturated vapor)",
+    "Water (saturated vapor)": "Water (saturated liquid)",
+    "Butane (saturated liquid)": "Butane (saturated vapor)",
+    "Butane (saturated vapor)": "Butane (saturated liquid)",
+    "Propane (saturated liquid)": "Propane (saturated vapor)",
+    "Propane (saturated vapor)": "Propane (saturated liquid)",
+    "Carbon dioxide CO2 (saturated liquid)": "Carbon dioxide CO2 (saturated vapor)",
+    "Carbon dioxide CO2 (saturated vapor)": "Carbon dioxide CO2 (saturated liquid)",
+    "Ammonia (saturated liquid)": "Ammonia (saturated vapor)",
+    "Ammonia (saturated vapor)": "Ammonia (saturated liquid)",
+    "R-12 (saturated liquid)": "R-12 (saturated vapor)",
+    "R-12 (saturated vapor)": "R-12 (saturated liquid)",
+    "R-22 (saturated liquid)": "R-22 (saturated vapor)",
+    "R-22 (saturated vapor)": "R-22 (saturated liquid)",
+    "R-134a (saturated liquid)": "R-134a (saturated vapor)",
+    "R-134a (saturated vapor)": "R-134a (saturated liquid)",
+    "R-404A (saturated liquid)": "R-404A (saturated vapor)",
+    "R-404A (saturated vapor)": "R-404A (saturated liquid)",
+    "R-504A (saturated liquid)": "R-504A (saturated vapor)",
+    "R-504A (saturated vapor)": "R-504A (saturated liquid)",
+    "R-508B (saturated liquid)": "R-508B (saturated vapor)",
+    "R-508B (saturated vapor)": "R-508B (saturated liquid)",
+}
+
+
+
+
+
 def getInputs1(menu, fluids):
     inputs1Dict = {
         "flow type": None,
