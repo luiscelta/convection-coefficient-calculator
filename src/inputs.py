@@ -233,7 +233,8 @@ def getInputs1(menu, fluids):
         "geometry1 type": None,
         "geometry2 type": None,
         "subtype": None,
-        "fluid": None
+        "fluid": None,
+        "fluid pair": None
     }
 
     current = menu
@@ -261,17 +262,26 @@ def getInputs1(menu, fluids):
 
         current = selected["submenu"]
 
+
+    if inputs1Dict["flow type"] in ["Natural condensation", "Forced condensation"]:
+        filteredFluids = [v for v in fluids.values() if v in fluidPairs]
+        availableFluids = {i + 1: v for i, v in enumerate(filteredFluids)}
+    else:
+        availableFluids = fluids
+
     print("-" * 60)
-    for key, value in fluids.items():
+    for key, value in availableFluids.items():
         print(f"  [{key}] {value}")
     print("-" * 60)
 
     while True:
         choice = input("  Select a fluid: ").strip()
-        if not choice.isdigit() or int(choice) not in fluids:
+        if not choice.isdigit() or int(choice) not in availableFluids:
             print("  Invalid option.")
             continue
-        inputs1Dict["fluid"] = fluids[int(choice)]
+        inputs1Dict["fluid"] = availableFluids[int(choice)]
+        if inputs1Dict["flow type"] in ["Natural condensation", "Forced condensation"]:
+            inputs1Dict["fluid pair"] = fluidPairs[inputs1Dict["fluid"]]
         break
 
     return inputs1Dict

@@ -459,6 +459,33 @@ def internalForcedConvectionRectangularDuctConstantT(d, fluidProperties):
     return nusselt
 
 
+
+def internalForcedConvectionRectangularDuctConstantQ(d, fluidProperties):
+    characteristicLength = d["characteristic length"]["result"]
+    ratio = d["characteristic length"]["ratio"]
+    fluidVelocity = d["fluid velocity"]
+    propsFluid = fluidProperties["fluid"]
+    reynolds = calculateReynolds(propsFluid.density, fluidVelocity, characteristicLength, propsFluid.dynamicViscosity)
+    
+    if reynolds < 2300:
+        def getNusseltFromRatio():
+            ratioDict = {"1.43": 3.73, "2": 4.12, "3": 4.79, "4": 5.33, "8": 6.49, ">8": 8.23}
+            def getClosestValue(value):
+                if value > 8:
+                    return ">8"
+                options = [1.43, 2, 3, 4, 8]
+                return min(options, key=lambda x: abs(value - x))
+            aproxRatio = str(getClosestValue(ratio))
+            return ratioDict[aproxRatio]
+        
+        nusselt = getNusseltFromRatio()
+
+    else:
+        nusselt = internalForcedConvectionCircularDuct(d, fluidProperties)
+
+    return nusselt
+
+
 def internalForcedConvectionBetweenParallelPlanes(d, fluidProperties):
     characteristicLength = d["characteristic length"]["result"]
     length = d["characteristic length"]["length"]
