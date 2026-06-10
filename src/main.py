@@ -25,17 +25,16 @@ fluidProperties = getFluidProperties(fluid, temperatures)
 correlation = getCorrelation(keyTupleInputs)
 
 if inputs1Dict["fluid pair"] is not None:
-    pairFluid = inputs1Dict["fluid pair"]
-    if "(saturated liquid)" in fluid:
-        liquidProperties = fluidProperties
-        vaporProperties = getFluidProperties(pairFluid, temperatures)
-    else:
-        vaporProperties = fluidProperties
-        liquidProperties = getFluidProperties(pairFluid, temperatures)
+    fluidPair = inputs1Dict["fluid pair"]
+    liquidProperties = getFluidProperties(fluid, temperatures)
+    vaporProperties = getFluidProperties(fluidPair, temperatures)
+
     result = correlation(inputs2Dict, liquidProperties, vaporProperties)
 else:
-    result = correlation(inputs2Dict, fluidProperties)
+    fluidProperties = getFluidProperties(fluid, temperatures)
 
+    result = correlation(inputs2Dict, fluidProperties)
+    
 # 7. Show results
 showInputs(inputs1Dict, inputs2Dict)
 showResults(result)
