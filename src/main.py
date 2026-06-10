@@ -1,7 +1,7 @@
 from inputs import menu, fluids, parameters, getInputs1, getInputs2
 from fluids import getFluidProperties
 from selector import getCorrelation
-from results import showInputs, showResults
+from results import showInputs, showResults, showValidation
 
 # 1. User selects problem and fluid
 inputs1Dict = getInputs1(menu, fluids)
@@ -29,12 +29,14 @@ if inputs1Dict["fluid pair"] is not None:
     liquidProperties = getFluidProperties(fluid, temperatures)
     vaporProperties = getFluidProperties(fluidPair, temperatures)
 
-    result = correlation(inputs2Dict, liquidProperties, vaporProperties)
+    result, message = correlation(inputs2Dict, liquidProperties, vaporProperties)
 else:
     fluidProperties = getFluidProperties(fluid, temperatures)
 
-    result = correlation(inputs2Dict, fluidProperties)
-    
+    result, message = correlation(inputs2Dict, fluidProperties)
+
 # 7. Show results
+
 showInputs(inputs1Dict, inputs2Dict)
+showValidation(result, message)
 showResults(result)
