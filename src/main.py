@@ -17,9 +17,7 @@ inputs2Dict = getInputs2(data2Dict)
 inputs2Dict["fluid"] = inputs1Dict["fluid"]
 inputs2Dict["fluid pair"] = inputs1Dict["fluid pair"]
 fluid = inputs1Dict["fluid"]
-# 5. Get fluid properties
 temperatures = inputs2Dict["temperatures"]
-fluidProperties = getFluidProperties(fluid, temperatures)
 
 # 6. Get correlation and execute
 correlation = getCorrelation(keyTupleInputs)
@@ -29,14 +27,28 @@ if inputs1Dict["fluid pair"] is not None:
     liquidProperties = getFluidProperties(fluid, temperatures)
     vaporProperties = getFluidProperties(fluidPair, temperatures)
 
-    result, message = correlation(inputs2Dict, liquidProperties, vaporProperties)
+    value, conductivity, message = correlation(inputs2Dict, liquidProperties, vaporProperties)
 else:
     fluidProperties = getFluidProperties(fluid, temperatures)
 
-    result, message = correlation(inputs2Dict, fluidProperties)
+    value, conductivity, message = correlation(inputs2Dict, fluidProperties)
 
-# 7. Show results
+if value is not None:
+    characteristicLength = inputs2Dict["characteristic length"]["result"]
+    if isinstance(conductivity, (int, float)):
+        result = value * conductivity / characteristicLength
+        resultType = "h"
+    elif conductivity == "k":
+        result = value
+        resultType = "k"
+    else:
+        result = value
+        resultType = "h"
+else:
+    result = None
+    resultType = None
 
+# 8. Show results
 showInputs(inputs1Dict, inputs2Dict)
 showValidation(result, message)
-showResults(result)
+showResults(result, resultType)

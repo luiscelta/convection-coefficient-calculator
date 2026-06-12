@@ -24,7 +24,7 @@ def internalNaturalConvectionNarrowVerticalDuct(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     length = d["characteristic length"]["length"]
     characteristicLength = d["characteristic length"]["result"]
@@ -35,9 +35,10 @@ def internalNaturalConvectionNarrowVerticalDuct(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if rayleigh < length / characteristicLength:
-        return (coefficient * rayleigh, None)
+        return (coefficient * rayleigh, props.conductivity, None)
+    
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
     
 
 
@@ -46,7 +47,7 @@ def internalNaturalConvectionVerticalRectangularCavity(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["mean"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     length = d["characteristic length"]["length"]
     characteristicLength = d["characteristic length"]["result"]
@@ -56,25 +57,27 @@ def internalNaturalConvectionVerticalRectangularCavity(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
     
     if rayleigh < 1000:
-        return (1, None)
+        return (1, props.conductivity, None)
+    
     else:
         ratio = length / characteristicLength
         if 1 < ratio < 2:
             if not 1e3 < prandtl / (0.2 + prandtl) * rayleigh:
-                return (None, "Outside the recommended operating range")
-            return (0.18 * (prandtl * rayleigh / (0.2 + prandtl))**0.29, None)
+                return (None, None, "Outside the recommended operating range")
+            return (0.18 * (prandtl * rayleigh / (0.2 + prandtl))**0.29, props.conductivity, None)
 
         elif 2 <= ratio < 20:
             if not rayleigh < 1e10:
                 return (None, "Outside the recommended operating range")
-            return (0.22 * (prandtl * rayleigh / (0.2 + prandtl))**0.28 * ratio**(-1/4), None)
+            return (0.22 * (prandtl * rayleigh / (0.2 + prandtl))**0.28 * ratio**(-1/4), props.conductivity, None)
             
         elif 20 <= ratio < 40:
             if not 1e4 < rayleigh < 1e7 or not 1 < prandtl < 2e4:
-                return (None, "Outside the recommended operating range")
-            return (0.42 * rayleigh**(1/4) * prandtl**0.012 * ratio**(-0.3), None)
+                return (None, None, "Outside the recommended operating range")
+            return (0.42 * rayleigh**(1/4) * prandtl**0.012 * ratio**(-0.3), props.conductivity, None)
+        
         else:
-            return (None, "Non suitable inputs for this correlation")
+            return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -83,7 +86,7 @@ def internalNaturalConvectionInclinedRectangularCavity(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["mean"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     length = d["characteristic length"]["length"]
     characteristicLength = d["characteristic length"]["result"]
@@ -91,7 +94,7 @@ def internalNaturalConvectionInclinedRectangularCavity(d, fluidProperties):
     props = fluidProperties["mean"]
 
     if angle == 90:
-        return (None, "Use vertical rectangular cavity correlation for 90°")
+        return (None, None, "Use vertical rectangular cavity correlation for 90°")
 
     grashof = calculateGrashof(temperatures, characteristicLength, props.dynamicViscosity, props.density)
     prandtl = calculatePrandtl(props.dynamicViscosity, props.specificHeat, props.conductivity)
@@ -112,29 +115,29 @@ def internalNaturalConvectionInclinedRectangularCavity(d, fluidProperties):
     criticalAngle = getCriticalAngle()
 
     if rayleigh < criticalRayleigh:
-        return (1, None)
+        return (1, props.conductivity, None)
     
     elif rayleigh >= criticalRayleigh and angle <= criticalAngle:
         x = (rayleigh * cos(radians(angle)) / 5830)**(1/3) - 1
         if x < 0:
             x = 0
-        return (1 + 1.44 * (1 - 1708 / rayleigh / cos(radians(angle))) * (1 - 1708 * (sin(1.8 * radians(angle)))**1.6 / rayleigh / cos(radians(angle))) + x, None)
+        return (1 + 1.44 * (1 - 1708 / rayleigh / cos(radians(angle))) * (1 - 1708 * (sin(1.8 * radians(angle)))**1.6 / rayleigh / cos(radians(angle))) + x, props.conductivity, None)
     
     elif rayleigh >= criticalRayleigh and angle > criticalAngle:
         if criticalAngle < angle < 90:
-            result, message = internalNaturalConvectionVerticalRectangularCavity(d, fluidProperties)
+            result, _, message = internalNaturalConvectionVerticalRectangularCavity(d, fluidProperties)
             if result is None:
-                return (None, message)
-            return (result * (sin(radians(angle)))**(1/4), None)
+                return (None, None, message)
+            return (result * (sin(radians(angle)))**(1/4), props.conductivity, None)
         
         elif 90 < angle < 180:
-            result, message = internalNaturalConvectionVerticalRectangularCavity(d, fluidProperties)
+            result, _, message = internalNaturalConvectionVerticalRectangularCavity(d, fluidProperties)
             if result is None:
-                return (None, message)
-            return (1 + (result - 1) * sin(radians(angle)), None)
+                return (None, None, message)
+            return (1 + (result - 1) * sin(radians(angle)), props.conductivity, None)
             
         else:
-            return (None, "Non suitable inputs for this correlation")
+            return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -143,7 +146,7 @@ def internalNaturalConvectionHorizontalRectangularCavity(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["mean"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     topSurface = d["top surface"]
@@ -154,13 +157,14 @@ def internalNaturalConvectionHorizontalRectangularCavity(d, fluidProperties):
 
     def calculateForHotterLowerSurface():
         if rayleigh < 1708:
-            return (1, None)
+            return (1, props.conductivity, None)
+        
         else:
             return internalNaturalConvectionInclinedRectangularCavity(d, fluidProperties)
 
 
     if temperatures["surface 1"] > temperatures["surface 2"] and topSurface == 1:
-        return (1, None)
+        return (1, props.conductivity, None)
     
     elif temperatures["surface 1"] < temperatures["surface 2"] and topSurface == 1:
         return calculateForHotterLowerSurface()
@@ -169,10 +173,10 @@ def internalNaturalConvectionHorizontalRectangularCavity(d, fluidProperties):
         return calculateForHotterLowerSurface()
 
     elif temperatures["surface 1"] < temperatures["surface 2"] and topSurface == 2:
-        return (1, None)
+        return (1, props.conductivity, None)
 
     else:
-        return (None, "Invalid case")
+        return (None, None, "Invalid case")
     
 
 
@@ -181,7 +185,7 @@ def internalNaturalConvectionSphericalCavity(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     props = fluidProperties["film"]
@@ -192,13 +196,15 @@ def internalNaturalConvectionSphericalCavity(d, fluidProperties):
     if 1e4 <= rayleigh < 1e9:
         C = 0.59
         n = 1/4
+        
     elif 1e9 <= rayleigh <= 1e12:
         C = 0.13
         n = 1/3   
-    else:
-        return (None, "Outside the recommended operating range")
 
-    return (C * rayleigh**n, None)
+    else:
+        return (None, None, "Outside the recommended operating range")
+
+    return (C * rayleigh**n, props.conductivity, None)
 
 
 
@@ -207,7 +213,7 @@ def internalNaturalConvectionConcentricCylinders(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["mean"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     innerDiameter = d["characteristic length"]["inner diameter"]
@@ -218,9 +224,9 @@ def internalNaturalConvectionConcentricCylinders(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if not (0.7 <= prandtl <= 6000) or not (10 <= log(outerDiameter/innerDiameter)**4 / characteristicLength**3 / (1 / innerDiameter**(3/5) + 1 / outerDiameter**(3/5))**5 * rayleigh <= 1e7):
-        return (None, "Outside the recommended operating range")
+        return (None, None, "Outside the recommended operating range")
 
-    return (props.conductivity * 0.386 * log(outerDiameter/innerDiameter) / characteristicLength**(3/4) / (1 / innerDiameter**(3/5) + 1 / outerDiameter**(3/5))**(5/4) * (prandtl / (0.861 + prandtl))**(1/4) * rayleigh**(1/4), None)
+    return (props.conductivity * 0.386 * log(outerDiameter/innerDiameter) / characteristicLength**(3/4) / (1 / innerDiameter**(3/5) + 1 / outerDiameter**(3/5))**(5/4) * (prandtl / (0.861 + prandtl))**(1/4) * rayleigh**(1/4), "k", None)
 
     
 
@@ -229,7 +235,7 @@ def internalNaturalConvectionConcentricSpheres(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["mean"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     innerDiameter = d["characteristic length"]["inner diameter"]
@@ -240,9 +246,9 @@ def internalNaturalConvectionConcentricSpheres(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if not (0.7 <= prandtl <= 4200) or not (10 <= characteristicLength / (outerDiameter * innerDiameter)**4 / (innerDiameter**(-7/5) + outerDiameter**(-7/5))**5 * rayleigh <= 1e7):
-        return (None, "Outside the recommended operating range")
+        return (None, None, "Outside the recommended operating range")
 
-    return (props.conductivity * 0.74 * characteristicLength**(1/4) / (outerDiameter * innerDiameter) / (innerDiameter**(-7/5) + outerDiameter**(-7/5))**(5/4) * (prandtl / (0.861 + prandtl))**(1/4) * rayleigh**(1/4), None)
+    return (props.conductivity * 0.74 * characteristicLength**(1/4) / (outerDiameter * innerDiameter) / (innerDiameter**(-7/5) + outerDiameter**(-7/5))**(5/4) * (prandtl / (0.861 + prandtl))**(1/4) * rayleigh**(1/4), "k", None)
 
 
 
@@ -251,7 +257,7 @@ def externalNaturalConvectionVerticalFlatPlate(d, fluidProperties, g=9.81):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     props = fluidProperties["film"]
@@ -260,9 +266,9 @@ def externalNaturalConvectionVerticalFlatPlate(d, fluidProperties, g=9.81):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if rayleigh < 1e9:
-        return (0.68 + 0.67 * rayleigh**(1/4) / (1 + (0.492 / prandtl)**(9/16))**(4/9), None)
+        return (0.68 + 0.67 * rayleigh**(1/4) / (1 + (0.492 / prandtl)**(9/16))**(4/9), props.conductivity, None)
     else:
-        return ((0.825 + 0.387 * rayleigh**(1/6) / (1 + (0.492 / prandtl)**(9/16))**(8/27))**2, None)
+        return ((0.825 + 0.387 * rayleigh**(1/6) / (1 + (0.492 / prandtl)**(9/16))**(8/27))**2, props.conductivity, None)
 
 
 
@@ -278,7 +284,7 @@ def externalNaturalConvectionHorizontalFlatPlateTopHot(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     props = fluidProperties["film"]
@@ -287,13 +293,13 @@ def externalNaturalConvectionHorizontalFlatPlateTopHot(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if 1e4 <= rayleigh <= 1e7:
-        return (0.54 * rayleigh**(1/4), None)
+        return (0.54 * rayleigh**(1/4), props.conductivity, None)
     
     elif 1e7 < rayleigh <= 1e11:
-        return (0.15 * rayleigh**(1/3), None)
+        return (0.15 * rayleigh**(1/3), props.conductivity, None)
 
     else:
-        return (None, "Outside the recommended operating range")
+        return (None, None, "Outside the recommended operating range")
 
 
 
@@ -302,7 +308,7 @@ def externalNaturalConvectionHorizontalFlatPlateTopCold(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     props = fluidProperties["film"]
@@ -311,9 +317,9 @@ def externalNaturalConvectionHorizontalFlatPlateTopCold(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if not (1e5 <= rayleigh <= 1e11):
-        return (None, "Outside the recommended operating range")
+        return (None, None, "Outside the recommended operating range")
     
-    return (0.27 * rayleigh**(1/4), None)
+    return (0.27 * rayleigh**(1/4), props.conductivity, None)
 
 
 
@@ -322,7 +328,7 @@ def externalNaturalConvectionVerticalCylinder(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     diameter = d["characteristic length"]["diameter"]
@@ -330,7 +336,7 @@ def externalNaturalConvectionVerticalCylinder(d, fluidProperties):
     grashof = calculateGrashof(temperatures, characteristicLength, props.dynamicViscosity, props.density)
 
     if not (diameter / characteristicLength >= 35 / grashof**(1/4)):
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
     return externalNaturalConvectionVerticalFlatPlate(d, fluidProperties)
 
@@ -340,7 +346,7 @@ def externalNaturalConvectionInclinedCylinder(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     diameter = d["characteristic length"]["diameter"]
@@ -349,7 +355,7 @@ def externalNaturalConvectionInclinedCylinder(d, fluidProperties):
     grashof = calculateGrashof(temperatures, characteristicLength, props.dynamicViscosity, props.density)
 
     if not (diameter / characteristicLength >= 35 / grashof**(1/4)):
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
     
     return externalNaturalConvectionVerticalFlatPlate(d, fluidProperties, g=9.81*cos(radians(angle)))
 
@@ -359,7 +365,7 @@ def externalNaturalConvectionHorizontalCylinder(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     props = fluidProperties["film"]
@@ -368,10 +374,10 @@ def externalNaturalConvectionHorizontalCylinder(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if rayleigh < 1e9:
-        return (0.36 + 0.518 * rayleigh**(1/4) / (1 + (0.559 / prandtl)**(9/16))**(4/9), None)
+        return (0.36 + 0.518 * rayleigh**(1/4) / (1 + (0.559 / prandtl)**(9/16))**(4/9), props.conductivity, None)
 
     else:
-        return ((0.6 + 0.387 * (rayleigh / (1 + (0.559 / prandtl)**(9/16))**(16/9))**(1/6))**2, None)
+        return ((0.6 + 0.387 * (rayleigh / (1 + (0.559 / prandtl)**(9/16))**(16/9))**(1/6))**2, props.conductivity, None)
 
   
 
@@ -380,7 +386,7 @@ def externalNaturalConvectionSphere(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
 
     characteristicLength = d["characteristic length"]["result"]
     props = fluidProperties["film"]
@@ -389,9 +395,9 @@ def externalNaturalConvectionSphere(d, fluidProperties):
     rayleigh = calculateRayleigh(grashof, prandtl)
 
     if not (prandtl >= 0.7) or not (rayleigh <= 1e11):
-        return (None, "Outside the recommended operating range")
+        return (None, None, "Outside the recommended operating range")
     
-    return (2 + 0.589 * rayleigh**(1/4) / (1 + (0.469 / prandtl)**(9/16))**(4/9), None)
+    return (2 + 0.589 * rayleigh**(1/4) / (1 + (0.469 / prandtl)**(9/16))**(4/9), props.conductivity, None)
 
 
 
@@ -401,7 +407,7 @@ def internalForcedConvectionCircularDuct(d, fluidProperties):
     if "surface" in temperatures:
         isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid", "surface"])
         if not isValid:
-            return (None, message)
+            return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     fluidVelocity = d["fluid velocity"]
@@ -415,27 +421,27 @@ def internalForcedConvectionCircularDuct(d, fluidProperties):
     if reynolds < 2300:
         length = d["characteristic length"]["length"]
         if not (100 < reynolds * prandtl * characteristicLength / length < 1500) or not (prandtl > 0.7):
-            return (None, "Outside the recommended operating range")
+            return (None, None, "Outside the recommended operating range")
         
         propsSurface = fluidProperties["surface"]
-        return (3.66 + 0.0668 * characteristicLength / length * reynolds * prandtl / (1 + 0.045 * (characteristicLength / length * reynolds * prandtl)**(2/3)) * (propsFluid.dynamicViscosity / propsSurface.dynamicViscosity)**0.14, None)
+        return (3.66 + 0.0668 * characteristicLength / length * reynolds * prandtl / (1 + 0.045 * (characteristicLength / length * reynolds * prandtl)**(2/3)) * (propsFluid.dynamicViscosity / propsSurface.dynamicViscosity)**0.14, propsFluid.conductivity, None)
 
     elif 2300 <= reynolds < 1e4:
         if not (0.5 < prandtl < 2000):
-            return (None, "Outside the recommended operating range")
+            return (None, None, "Outside the recommended operating range")
 
         frictionFactor = calculateFrictionFactor(reynolds)
-        return ((frictionFactor / 8 * (reynolds - 1000) * prandtl) / (1 + 12.7 * (frictionFactor / 8)**(1/2) * (prandtl**(2/3) - 1)), None)
+        return ((frictionFactor / 8 * (reynolds - 1000) * prandtl) / (1 + 12.7 * (frictionFactor / 8)**(1/2) * (prandtl**(2/3) - 1)), propsFluid.conductivity, None)
     
     elif 1e4 <= reynolds < 5e6:
         if not (0.5 < prandtl < 2000):
-            return (None, "Outside the recommended operating range")
+            return (None, None, "Outside the recommended operating range")
         
         frictionFactor = calculateFrictionFactor(reynolds)
-        return ((frictionFactor / 8 * reynolds * prandtl) / (1.07 + 12.7 * (frictionFactor / 8)**(1/2) * (prandtl**(2/3) - 1)), None)
+        return ((frictionFactor / 8 * reynolds * prandtl) / (1.07 + 12.7 * (frictionFactor / 8)**(1/2) * (prandtl**(2/3) - 1)), propsFluid.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -444,7 +450,7 @@ def internalForcedConvectionTriangularDuctConstantT(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     fluidVelocity = d["fluid velocity"]
@@ -452,7 +458,7 @@ def internalForcedConvectionTriangularDuctConstantT(d, fluidProperties):
     reynolds = calculateReynolds(propsFluid.density, fluidVelocity, characteristicLength, propsFluid.dynamicViscosity)
     
     if reynolds < 2300:
-        return (2.47, None)
+        return (2.47, propsFluid.conductivity, None)
 
     else:
         return internalForcedConvectionCircularDuct(d, fluidProperties)
@@ -464,7 +470,7 @@ def internalForcedConvectionTriangularDuctConstantQ(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     fluidVelocity = d["fluid velocity"]
@@ -472,7 +478,7 @@ def internalForcedConvectionTriangularDuctConstantQ(d, fluidProperties):
     reynolds = calculateReynolds(propsFluid.density, fluidVelocity, characteristicLength, propsFluid.dynamicViscosity)
     
     if reynolds < 2300:
-        return (3.11, None)
+        return (3.11, propsFluid.conductivity, None)
 
     else:
         return internalForcedConvectionCircularDuct(d, fluidProperties)
@@ -484,7 +490,7 @@ def internalForcedConvectionSquaredDuctConstantT(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     fluidVelocity = d["fluid velocity"]
@@ -492,7 +498,7 @@ def internalForcedConvectionSquaredDuctConstantT(d, fluidProperties):
     reynolds = calculateReynolds(propsFluid.density, fluidVelocity, characteristicLength, propsFluid.dynamicViscosity)
     
     if reynolds < 2300:
-        return (2.98, None)
+        return (2.98, propsFluid.conductivity, None)
 
     else:
         return internalForcedConvectionCircularDuct(d, fluidProperties)
@@ -504,7 +510,7 @@ def internalForcedConvectionSquaredDuctConstantQ(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     fluidVelocity = d["fluid velocity"]
@@ -512,7 +518,7 @@ def internalForcedConvectionSquaredDuctConstantQ(d, fluidProperties):
     reynolds = calculateReynolds(propsFluid.density, fluidVelocity, characteristicLength, propsFluid.dynamicViscosity)
     
     if reynolds < 2300:
-        return (3.61, None)
+        return (3.61, propsFluid.conductivity, None)
 
     else:
         return internalForcedConvectionCircularDuct(d, fluidProperties)
@@ -524,7 +530,7 @@ def internalForcedConvectionRectangularDuctConstantT(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     ratio = d["characteristic length"]["ratio"]
@@ -543,7 +549,7 @@ def internalForcedConvectionRectangularDuctConstantT(d, fluidProperties):
             aproxRatio = str(getClosestValue(ratio))
             return ratioDict[aproxRatio]
         
-        return (getNusseltFromRatio(), None)
+        return (getNusseltFromRatio(), propsFluid.conductivity, None)
 
     else:
         return internalForcedConvectionCircularDuct(d, fluidProperties)
@@ -555,7 +561,7 @@ def internalForcedConvectionRectangularDuctConstantQ(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     ratio = d["characteristic length"]["ratio"]
@@ -574,7 +580,7 @@ def internalForcedConvectionRectangularDuctConstantQ(d, fluidProperties):
             aproxRatio = str(getClosestValue(ratio))
             return ratioDict[aproxRatio]
         
-        return (getNusseltFromRatio(), None)
+        return (getNusseltFromRatio(), propsFluid.conductivity, None)
 
     else:
         return internalForcedConvectionCircularDuct(d, fluidProperties)
@@ -586,7 +592,7 @@ def internalForcedConvectionBetweenParallelPlanes(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     length = d["characteristic length"]["length"]
@@ -596,7 +602,7 @@ def internalForcedConvectionBetweenParallelPlanes(d, fluidProperties):
     prandtl = calculatePrandtl(propsFluid.dynamicViscosity, propsFluid.specificHeat, propsFluid.conductivity)
     
     if reynolds < 2800:        
-        return (7.54 + 0.03 * characteristicLength / length * reynolds * prandtl / (1 + 0.016 * (characteristicLength / length * reynolds * prandtl)**(2/3)), None)
+        return (7.54 + 0.03 * characteristicLength / length * reynolds * prandtl / (1 + 0.016 * (characteristicLength / length * reynolds * prandtl)**(2/3)), propsFluid.conductivity, None)
 
     else:
         return internalForcedConvectionCircularDuct(d, fluidProperties)
@@ -608,7 +614,7 @@ def internalForcedConvectionAnnularDuctInnerHeatFlow(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     length = d["characteristic length"]["length"]
@@ -621,15 +627,15 @@ def internalForcedConvectionAnnularDuctInnerHeatFlow(d, fluidProperties):
     
     if reynolds < 2300:
         if not (0.1 < prandtl < 1000):
-            return (None, "Outside the recommended operating range")
+            return (None, None, "Outside the recommended operating range")
                 
-        return (3.66 + 1.2 * (innerDiameter / outerDiameter)**(-0.8) + (1 + 0.14 * (innerDiameter / outerDiameter)**(-0.5)) * 0.19 * (reynolds * prandtl * characteristicLength / length)**0.8 / (1 + 0.117 * (reynolds * prandtl * characteristicLength / length)**0.467), None)
+        return (3.66 + 1.2 * (innerDiameter / outerDiameter)**(-0.8) + (1 + 0.14 * (innerDiameter / outerDiameter)**(-0.5)) * 0.19 * (reynolds * prandtl * characteristicLength / length)**0.8 / (1 + 0.117 * (reynolds * prandtl * characteristicLength / length)**0.467), propsFluid.conductivity, None)
 
     else:
-        result, message = internalForcedConvectionCircularDuct(d, fluidProperties)
+        result, conductivity, message = internalForcedConvectionCircularDuct(d, fluidProperties)
         if result is None:
-            return (None, message)
-        return (result * 0.86 * (innerDiameter / outerDiameter)**(-0.16), None)
+            return (None, None, message)
+        return (result * 0.86 * (innerDiameter / outerDiameter)**(-0.16), conductivity, None)
 
 
 
@@ -638,7 +644,7 @@ def internalForcedConvectionAnnularDuctOuterHeatFlow(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     length = d["characteristic length"]["length"]
@@ -651,15 +657,15 @@ def internalForcedConvectionAnnularDuctOuterHeatFlow(d, fluidProperties):
     
     if reynolds < 2300:
         if not (0.1 < prandtl < 1000):
-            return (None, "Outside the recommended operating range")
+            return (None, None, "Outside the recommended operating range")
                 
-        return (3.66 + 1.2 * (innerDiameter / outerDiameter)**(0.5) + (1 + 0.14 * (innerDiameter / outerDiameter)**(1/3)) * 0.19 * (reynolds * prandtl * characteristicLength / length)**0.8 / (1 + 0.117 * (reynolds * prandtl * characteristicLength / length)**0.467), None)
+        return (3.66 + 1.2 * (innerDiameter / outerDiameter)**(0.5) + (1 + 0.14 * (innerDiameter / outerDiameter)**(1/3)) * 0.19 * (reynolds * prandtl * characteristicLength / length)**0.8 / (1 + 0.117 * (reynolds * prandtl * characteristicLength / length)**0.467), propsFluid.conductivity, None)
 
     else:
-        result, message = internalForcedConvectionCircularDuct(d, fluidProperties)
+        result, conductivity, message = internalForcedConvectionCircularDuct(d, fluidProperties)
         if result is None:
-            return (None, message)
-        return (result * (1 - 0.14 * (innerDiameter / outerDiameter)**(0.6)), None)
+            return (None, None, message)
+        return (result * (1 - 0.14 * (innerDiameter / outerDiameter)**(0.6)), conductivity, None)
 
 
 
@@ -668,7 +674,7 @@ def internalForcedConvectionAnnularDuctInnerOuterHeatFlow(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     length = d["characteristic length"]["length"]
@@ -681,15 +687,15 @@ def internalForcedConvectionAnnularDuctInnerOuterHeatFlow(d, fluidProperties):
     
     if reynolds < 2300:
         if not (0.1 < prandtl < 1000):
-            return (None, "Outside the recommended operating range")
+            return (None, None, "Outside the recommended operating range")
                 
-        return (3.66 + (4 - 0.012 / (innerDiameter / outerDiameter + 0.2)) * (innerDiameter / outerDiameter)**0.04 + (1 + 0.14 * (innerDiameter / outerDiameter)**0.1) * 0.19 * (reynolds * prandtl * characteristicLength / length)**0.8 / (1 + 0.117 * (reynolds * prandtl * characteristicLength / length)**0.467), None)
+        return (3.66 + (4 - 0.012 / (innerDiameter / outerDiameter + 0.2)) * (innerDiameter / outerDiameter)**0.04 + (1 + 0.14 * (innerDiameter / outerDiameter)**0.1) * 0.19 * (reynolds * prandtl * characteristicLength / length)**0.8 / (1 + 0.117 * (reynolds * prandtl * characteristicLength / length)**0.467), propsFluid.conductivity, None)
 
     else:
-        result, message = internalForcedConvectionCircularDuct(d, fluidProperties)
+        result, conductivity, message = internalForcedConvectionCircularDuct(d, fluidProperties)
         if result is None:
-            return (None, message)
-        return (result * (0.86 * (innerDiameter / outerDiameter)**0.84 + 1 - 0.14 * (innerDiameter / outerDiameter)**0.6) / (1 + innerDiameter / outerDiameter), None)
+            return (None, None, message)
+        return (result * (0.86 * (innerDiameter / outerDiameter)**0.84 + 1 - 0.14 * (innerDiameter / outerDiameter)**0.6) / (1 + innerDiameter / outerDiameter), conductivity, None)
 
     
 
@@ -699,7 +705,7 @@ def internalForcedConvectionHelicalCoil(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid", "surface"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     coilDiameter = d["characteristic length"]["coil diameter"]
@@ -722,14 +728,14 @@ def internalForcedConvectionHelicalCoil(d, fluidProperties):
         return (frictionFactor / 8 * re * prandtl) / (1.07 + 12.7 * (frictionFactor / 8)**(1/2) * (prandtl**(2/3) - 1))
 
     if reynolds < criticalReynolds:
-        return (nusseltLaminar(reynolds), None)
+        return (nusseltLaminar(reynolds), propsFluid.conductivity, None)
     
     elif criticalReynolds <= reynolds <= 22000:
         C = (22000 - reynolds) / (22000 - criticalReynolds)
-        return (C * nusseltLaminar(criticalReynolds) + (1 - C) * nusseltTurbulent(22000), None)
+        return (C * nusseltLaminar(criticalReynolds) + (1 - C) * nusseltTurbulent(22000), propsFluid.conductivity, None)
     
     else:
-        return (nusseltTurbulent(reynolds), None)
+        return (nusseltTurbulent(reynolds), propsFluid.conductivity, None)
 
 
 
@@ -738,7 +744,7 @@ def externalForcedConvectionFlatPlate(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -748,14 +754,14 @@ def externalForcedConvectionFlatPlate(d, fluidProperties):
 
     if reynolds < 5e5:
         if prandtl <= 0.5:
-            return (1.128 * (reynolds * prandtl)**(1/2), None)
+            return (1.128 * (reynolds * prandtl)**(1/2), props.conductivity, None)
         else:
-            return (0.664 * reynolds**(1/2) * prandtl**(1/3), None)
+            return (0.664 * reynolds**(1/2) * prandtl**(1/3), props.conductivity, None)
     else:
         if not (0.6 < prandtl < 60) or not (5e5 < reynolds < 1e8):
-            return (None, "Outside the recommended operating range")
+            return (None, None, "Outside the recommended operating range")
 
-        return ((0.037 * reynolds**(4/5) - 871) * prandtl**(1/3), None)
+        return ((0.037 * reynolds**(4/5) - 871) * prandtl**(1/3), props.conductivity, None)
 
 
 
@@ -764,7 +770,7 @@ def externalForcedConvectionPerpendicularFlowCylinders(d, fluidProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -773,17 +779,17 @@ def externalForcedConvectionPerpendicularFlowCylinders(d, fluidProperties):
     reynolds = calculateReynolds(props.density, fluidVelocity, characteristicLength, props.dynamicViscosity)
 
     if reynolds * prandtl < 0.2:
-        return (1 / (0.8237 - log((reynolds * prandtl)**(1/2))), None)
+        return (1 / (0.8237 - log((reynolds * prandtl)**(1/2))), props.conductivity, None)
     
     else:
         if 2e4 <= reynolds < 4e5:
-            return (0.3 + 0.62 * reynolds**(1/2) * prandtl**(1/3) / (1 + (0.4 / prandtl)**(2/3))**(1/4) * (1 + (reynolds / 282000)**(1/2)), None)
+            return (0.3 + 0.62 * reynolds**(1/2) * prandtl**(1/3) / (1 + (0.4 / prandtl)**(2/3))**(1/4) * (1 + (reynolds / 282000)**(1/2)), props.conductivity, None)
         
         elif (1e2 <= reynolds < 2e4) or (4e5 <= reynolds < 1e7):
-            return (0.3 + 0.62 * reynolds**(1/2) * prandtl**(1/3) / (1 + (0.4 / prandtl)**(2/3))**(1/4) * (1 + (reynolds / 282000)**(5/8))**(4/5), None)
+            return (0.3 + 0.62 * reynolds**(1/2) * prandtl**(1/3) / (1 + (0.4 / prandtl)**(2/3))**(1/4) * (1 + (reynolds / 282000)**(5/8))**(4/5), props.conductivity, None)
         
         else:
-            return (None, "Non suitable inputs for this correlation")
+            return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -792,7 +798,7 @@ def externalForcedConvectionPerpendicularFlowSquareFaceOriented(d, fluidProperti
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -803,13 +809,13 @@ def externalForcedConvectionPerpendicularFlowSquareFaceOriented(d, fluidProperti
         return C * re**n
 
     if 2500 <= reynolds < 5000:
-        return (calculateNusselt(reynolds, 0.16, 0.699), None)
+        return (calculateNusselt(reynolds, 0.16, 0.699), props.conductivity, None)
     
     elif 5000 <= reynolds < 1e5:
-        return (calculateNusselt(reynolds, 0.092, 0.675), None)
+        return (calculateNusselt(reynolds, 0.092, 0.675), props.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -818,7 +824,7 @@ def externalForcedConvectionPerpendicularFlowSquareAristOriented(d, fluidPropert
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -829,13 +835,13 @@ def externalForcedConvectionPerpendicularFlowSquareAristOriented(d, fluidPropert
         return C * re**n
 
     if 2500 <= reynolds < 5000:
-        return (calculateNusselt(reynolds, 0.224, 0.612), None)
+        return (calculateNusselt(reynolds, 0.224, 0.612), props.conductivity, None)
     
     elif 5000 <= reynolds < 1e5:
-        return (calculateNusselt(reynolds, 0.222, 0.588), None)
+        return (calculateNusselt(reynolds, 0.222, 0.588), props.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -844,7 +850,7 @@ def externalForcedConvectionPerpendicularFlowHexagonFaceOriented(d, fluidPropert
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -855,13 +861,13 @@ def externalForcedConvectionPerpendicularFlowHexagonFaceOriented(d, fluidPropert
         return C * re**n
 
     if 2500 <= reynolds < 19500:
-        return (calculateNusselt(reynolds, 0.144, 0.638), None)
+        return (calculateNusselt(reynolds, 0.144, 0.638), props.conductivity, None)
     
     elif 19500 <= reynolds < 1e5:
-        return (calculateNusselt(reynolds, 0.035, 0.782), None)
+        return (calculateNusselt(reynolds, 0.035, 0.782), props.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -870,7 +876,7 @@ def externalForcedConvectionPerpendicularFlowHexagonAristOriented(d, fluidProper
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -881,10 +887,10 @@ def externalForcedConvectionPerpendicularFlowHexagonAristOriented(d, fluidProper
         return C * re**n
 
     if 5000 <= reynolds <= 1e5:
-        return (calculateNusselt(reynolds, 0.138, 0.638), None)
+        return (calculateNusselt(reynolds, 0.138, 0.638), props.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -893,7 +899,7 @@ def externalForcedConvectionPerpendicularFlowRectangleFaceOriented(d, fluidPrope
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -904,10 +910,10 @@ def externalForcedConvectionPerpendicularFlowRectangleFaceOriented(d, fluidPrope
         return C * re**n
 
     if 4000 <= reynolds <= 15000:
-        return (calculateNusselt(reynolds, 0.205, 0.731), None)
+        return (calculateNusselt(reynolds, 0.205, 0.731), props.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -916,7 +922,7 @@ def externalForcedConvectionPerpendicularFlowEllipseWideOriented(d, fluidPropert
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -927,10 +933,10 @@ def externalForcedConvectionPerpendicularFlowEllipseWideOriented(d, fluidPropert
         return C * re**n
 
     if 3000 <= reynolds <= 15000:
-        return (calculateNusselt(reynolds, 0.085, 0.804), None)
+        return (calculateNusselt(reynolds, 0.085, 0.804), props.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -939,7 +945,7 @@ def externalForcedConvectionPerpendicularFlowEllipseNarrowOriented(d, fluidPrope
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -950,19 +956,19 @@ def externalForcedConvectionPerpendicularFlowEllipseNarrowOriented(d, fluidPrope
         return C * re**n
 
     if 2500 <= reynolds <= 15000:
-        return (calculateNusselt(reynolds, 0.224, 0.612), None)
+        return (calculateNusselt(reynolds, 0.224, 0.612), props.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
 def externalForcedConvectionSphere(d, fluidProperties):
     temperatures = d["temperatures"]
 
-    isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film", "surface"])
+    isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid", "surface"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     fluidVelocity = d["fluid velocity"]
@@ -972,18 +978,18 @@ def externalForcedConvectionSphere(d, fluidProperties):
     prandtl = calculatePrandtl(propsFluid.dynamicViscosity, propsFluid.specificHeat, propsFluid.conductivity)
 
     if not (0.71 < prandtl < 380) or not (3.5 < reynolds < 7.6e4) or not (1 < propsFluid.dynamicViscosity / propsSurface.dynamicViscosity < 3.2):
-        return (None, "Outside the recommended operating range")
+        return (None, None, "Outside the recommended operating range")
     
-    return (2 + (0.4 * reynolds**(1/2) + 0.06 * reynolds**(2/3)) * prandtl**0.4 * (propsFluid.dynamicViscosity / propsSurface.dynamicViscosity)**(1/4), None)
+    return (2 + (0.4 * reynolds**(1/2) + 0.06 * reynolds**(2/3)) * prandtl**0.4 * (propsFluid.dynamicViscosity / propsSurface.dynamicViscosity)**(1/4), propsFluid.conductivity, None)
 
 
 
 def externalForcedConvectionCrossFlowTubeBundleSquare(d, fluidProperties):
     temperatures = d["temperatures"]
 
-    isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film", "surface"])
+    isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid", "surface"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     x1 = d["characteristic length"]["x1"]  
@@ -1021,28 +1027,28 @@ def externalForcedConvectionCrossFlowTubeBundleSquare(d, fluidProperties):
     c2 = getC2(nCols)
 
     if 10 <= reynoldsMax < 100:
-        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.8, c2, 0.4), None)
+        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.8, c2, 0.4), propsFluid.conductivity, None)
     
     elif 100 <= reynoldsMax < 1000:
-        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.51, c2, 0.5), None)
+        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.51, c2, 0.5), propsFluid.conductivity, None)
     
     elif 1000 <= reynoldsMax < 2e5:
-        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.27, c2, 0.63), None)
+        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.27, c2, 0.63), propsFluid.conductivity, None)
     
     elif 2e5 <= reynoldsMax < 2e6:
-        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.021, c2, 0.84), None)
+        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.021, c2, 0.84), propsFluid.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
 def externalForcedConvectionCrossFlowTubeBundleTriangular(d, fluidProperties):
     temperatures = d["temperatures"]
 
-    isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film", "surface"])
+    isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["fluid", "surface"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]  
     x1 = d["characteristic length"]["x1"]
@@ -1089,24 +1095,24 @@ def externalForcedConvectionCrossFlowTubeBundleTriangular(d, fluidProperties):
     c2 = getC2(nCols)
 
     if 10 <= reynoldsMax < 100:
-        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.9, c2, 0.4), None)
+        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.9, c2, 0.4), propsFluid.conductivity, None)
     
     elif 100 <= reynoldsMax < 1000:
-        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.51, c2, 0.5), None)
+        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.51, c2, 0.5), propsFluid.conductivity, None)
     
     elif 1000 <= reynoldsMax < 2e5:
         if x1 / x2 < 2:
             c1 = 0.35 * (x1 / x2)**0.2
-            return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, c1, c2, 0.6), None)
+            return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, c1, c2, 0.6), propsFluid.conductivity, None)
         
         else:
-            return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.4, c2, 0.6), None)
+            return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.4, c2, 0.6), propsFluid.conductivity, None)
         
     elif 2e5 <= reynoldsMax < 2e6:
-        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.022, c2, 0.84), None)
+        return (calculateNusselt(reynoldsMax, prandtl, prandtlSurface, 0.022, c2, 0.84), propsFluid.conductivity, None)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
 
 
 
@@ -1115,7 +1121,7 @@ def naturalCondensationVerticalFlatSurface(d, liquidProperties, vaporProperties)
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     saturationTemperature = d["temperatures"]["saturation"]
     surfaceTemperature = d["temperatures"]["surface"]
@@ -1124,7 +1130,7 @@ def naturalCondensationVerticalFlatSurface(d, liquidProperties, vaporProperties)
     propsVaporSaturation = vaporProperties["saturation"]
     g = 9.81
 
-    return (0.943 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None)
+    return (0.943 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None, None)
     
 
 
@@ -1133,16 +1139,16 @@ def naturalCondensationInclinedFlatSurface(d, liquidProperties, vaporProperties)
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     angle = d["angle"]
 
-    result, message = naturalCondensationVerticalFlatSurface(d, liquidProperties, vaporProperties)
+    result, _, message = naturalCondensationVerticalFlatSurface(d, liquidProperties, vaporProperties)
     
     if result is None:
-        return (None, message)
+        return (None, None, message)
     
-    return (result * sin(radians(angle))**(1/4), None)
+    return (result * sin(radians(angle))**(1/4), None, None)
     
 
 
@@ -1151,7 +1157,7 @@ def naturalCondensationHorizontalFlatSurfaceStrip(d, liquidProperties, vaporProp
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     saturationTemperature = d["temperatures"]["saturation"]
     surfaceTemperature = d["temperatures"]["surface"]
@@ -1160,7 +1166,7 @@ def naturalCondensationHorizontalFlatSurfaceStrip(d, liquidProperties, vaporProp
     propsVaporSaturation = vaporProperties["saturation"]
     g = 9.81
 
-    return (1.079 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * characteristicLength**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / propsLiquidFilm.conductivity)**(1/5), None)
+    return (1.079 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * characteristicLength**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / propsLiquidFilm.conductivity)**(1/5), propsLiquidFilm.conductivity, None)
     
 
 
@@ -1169,7 +1175,7 @@ def naturalCondensationHorizontalFlatSurfaceDisk(d, liquidProperties, vaporPrope
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     saturationTemperature = d["temperatures"]["saturation"]
     surfaceTemperature = d["temperatures"]["surface"]
@@ -1178,7 +1184,7 @@ def naturalCondensationHorizontalFlatSurfaceDisk(d, liquidProperties, vaporPrope
     propsVaporSaturation = vaporProperties["saturation"]
     g = 9.81
 
-    return (1.368 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * characteristicLength**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / propsLiquidFilm.conductivity)**(1/5), None)
+    return (1.368 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * characteristicLength**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / propsLiquidFilm.conductivity)**(1/5), propsLiquidFilm.conductivity, None)
     
 
 
@@ -1197,7 +1203,7 @@ def naturalCondensationVerticalCylinder(d, liquidProperties, vaporProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     saturationTemperature = d["temperatures"]["saturation"]
     surfaceTemperature = d["temperatures"]["surface"]
@@ -1212,7 +1218,7 @@ def naturalCondensationVerticalCylinder(d, liquidProperties, vaporProperties):
        return naturalCondensationVerticalFlatSurface(d, liquidProperties, vaporProperties)
     
     else:
-        return (None, "Non suitable inputs for this correlation")
+        return (None, None, "Non suitable inputs for this correlation")
     
 
 
@@ -1221,7 +1227,7 @@ def naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     saturationTemperature = d["temperatures"]["saturation"]
     surfaceTemperature = d["temperatures"]["surface"]
@@ -1230,7 +1236,7 @@ def naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties):
     propsVaporSaturation = vaporProperties["saturation"]
     g = 9.81
 
-    return (0.725 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None)
+    return (0.725 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None, None)
     
 
 
@@ -1239,16 +1245,16 @@ def naturalCondensationHorizontalTubeBundle(d, liquidProperties, vaporProperties
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     nRows = d["number of rows"]
 
-    result, message = naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties)
+    result, _, message = naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties)
     
     if result is None:
-        return (None, message)
+        return (None, None, message)
     
-    return (result * nRows**(-2/9), None)
+    return (result * nRows**(-2/9), None, None)
     
 
 
@@ -1257,15 +1263,15 @@ def naturalCondensationInclinedCylinder(d, liquidProperties, vaporProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     angle = d["angle"]
 
-    result, message = naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties)
+    result, _, message = naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties)
     
     if result is None:
-        return (None, message)
-    return (result * (cos(radians(angle)))**(1/4), None)
+        return (None, None, message)
+    return (result * (cos(radians(angle)))**(1/4), None, None)
     
 
 
@@ -1274,7 +1280,7 @@ def naturalCondensationSphere(d, liquidProperties, vaporProperties):
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     saturationTemperature = d["temperatures"]["saturation"]
     surfaceTemperature = d["temperatures"]["surface"]
@@ -1283,7 +1289,7 @@ def naturalCondensationSphere(d, liquidProperties, vaporProperties):
     propsVaporSaturation = vaporProperties["saturation"]
     g = 9.81
 
-    return (0.815 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None)
+    return (0.815 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None, None)
     
 
 
@@ -1292,7 +1298,7 @@ def internalForcedCondensationCircularDuct(d, liquidProperties, vaporProperties)
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"], ["saturation"], d["fluid pair"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     saturationTemperature = d["temperatures"]["saturation"]
     surfaceTemperature = d["temperatures"]["surface"]
@@ -1305,23 +1311,23 @@ def internalForcedCondensationCircularDuct(d, liquidProperties, vaporProperties)
 
     if inletVaporReynolds < 35000:
         if saturationTemperature <= surfaceTemperature:
-            return (None, "Surface temperature must be lower than saturation temperature for condensation")
+            return (None, None, "Surface temperature must be lower than saturation temperature for condensation")
         
         g = 9.81
-        return (0.555 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None)
+        return (0.555 * (g * propsLiquidFilm.density * (propsLiquidFilm.density - propsVaporSaturation.density) * propsVaporSaturation.latentHeat * propsLiquidFilm.conductivity**3 / propsLiquidFilm.dynamicViscosity / (saturationTemperature - surfaceTemperature) / characteristicLength)**(1/4), None, None)
     
     else:
         inletVaporQuality = d["vapor quality"]["inlet"]
         outletVaporQuality = d["vapor quality"]["outlet"]
 
         if not (0 < inletVaporQuality <= 1):
-            return (None, "Inlet vapor quality must be between 0 and 1")
+            return (None, None, "Inlet vapor quality must be between 0 and 1")
 
         if not (0 <= outletVaporQuality <= 1):
-            return (None, "Outlet vapor quality must be between 0 and 1")
+            return (None, None, "Outlet vapor quality must be between 0 and 1")
 
         if outletVaporQuality > inletVaporQuality:
-            return (None, "For condensation, outlet vapor quality should be lower than inlet vapor quality")
+            return (None, None, "For condensation, outlet vapor quality should be lower than inlet vapor quality")
         
         equivalentLiquidVelocity = propsVaporSaturation.density / propsLiquidSaturation.density * inletVaporVelocity / inletVaporQuality
         liquidReynolds = calculateReynolds(propsLiquidSaturation.density, equivalentLiquidVelocity, characteristicLength, propsLiquidSaturation.dynamicViscosity)
@@ -1330,7 +1336,7 @@ def internalForcedCondensationCircularDuct(d, liquidProperties, vaporProperties)
         nusselt = (frictionFactor / 8 * liquidReynolds * liquidPrandtl) / (1.07 + 12.7 * (frictionFactor / 8)**(1/2) * (liquidPrandtl**(2/3) - 1))
         hl = nusselt * propsLiquidSaturation.conductivity / characteristicLength
 
-        return (hl / 2 * ((1 + inletVaporQuality * (propsLiquidSaturation.density / propsVaporSaturation.density - 1))**(1/2) + (1 + outletVaporQuality * (propsLiquidSaturation.density / propsVaporSaturation.density - 1))**(1/2)), None)
+        return (hl / 2 * ((1 + inletVaporQuality * (propsLiquidSaturation.density / propsVaporSaturation.density - 1))**(1/2) + (1 + outletVaporQuality * (propsLiquidSaturation.density / propsVaporSaturation.density - 1))**(1/2)), None, None)
         
 
 
@@ -1339,7 +1345,7 @@ def externalForcedCondensationHorizontalCircularDuct(d, liquidProperties, vaporP
 
     isValid, message = validateTemperatureRange(d["fluid"], temperatures, ["film"])
     if not isValid:
-        return (None, message)
+        return (None, None, message)
     
     characteristicLength = d["characteristic length"]["result"]
     vaporVelocity = d["vapor velocity"]
@@ -1352,9 +1358,9 @@ def externalForcedCondensationHorizontalCircularDuct(d, liquidProperties, vaporP
     else:
         hs = 0.59 * ratio**0.5 * propsLiquidFilm.conductivity / characteristicLength
     
-    result, message = naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties)
+    result, _, message = naturalCondensationHorizontalCylinder(d, liquidProperties, vaporProperties)
     
     if result is None:
-        return (None, message)
+        return (None, None, message)
     
-    return ((1 / 2 * hs**2 + (1 / 4 * hs**4 + result**4)**(1/2))**(1/2), None)
+    return ((1 / 2 * hs**2 + (1 / 4 * hs**4 + result**4)**(1/2))**(1/2), None, None)

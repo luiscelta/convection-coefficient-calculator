@@ -26,11 +26,18 @@ def showValidation(result, message):
         print(f"\n    Failed validation: {message}")
 
 
-def showResults(result):
+def showResults(result, resultType):
     print("\n" + "=" * 60)
     print("  RESULTS")
     print("=" * 60)
     if result is None:
         return
-    print(f"\n    h = {result:.4f} W/m²·K")
-    print()
+    
+    if resultType == "h":
+        print(f"\n    h = {result:.4f} W/m²·K")
+        print()
+    
+    elif resultType == "k":
+        print(f"\n    k = {result:.4f} W/m·K")
+        print()
+    

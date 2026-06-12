@@ -473,12 +473,3 @@ def getInputs2(data2Dict):
 
     return data2Dict
 
-
-
-if __name__ == "__main__":
-    inputs1Dict = getInputs1(menu, fluids)
-    keyTupleInputs = (inputs1Dict["flow type"], inputs1Dict["domain type"], inputs1Dict["geometry1 type"], inputs1Dict["geometry2 type"], inputs1Dict["subtype"])
-    data2Dict = parameters[keyTupleInputs] 
-    inputs2Dict = getInputs2(data2Dict)
-    print(inputs1Dict)
-    print(inputs2Dict)
