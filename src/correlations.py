@@ -68,7 +68,7 @@ def internalNaturalConvectionVerticalRectangularCavity(d, fluidProperties):
 
         elif 2 <= ratio < 20:
             if not rayleigh < 1e10:
-                return (None, "Outside the recommended operating range")
+                return (None, None, "Outside the recommended operating range")
             return (0.22 * (prandtl * rayleigh / (0.2 + prandtl))**0.28 * ratio**(-1/4), props.conductivity, None)
             
         elif 20 <= ratio < 40:
