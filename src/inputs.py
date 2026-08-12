@@ -41,7 +41,6 @@ menu = {
                     5: {"geometry1 type": "Vertical cylinder"},
                     6: {"geometry1 type": "Inclined cylinder"},
                     7: {"geometry1 type": "Horizontal cylinder"},
-                    8: {"geometry1 type": "Sphere"},
                 }
             }
         }
