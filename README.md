@@ -45,3 +45,16 @@ El programa guía al usuario paso a paso:
 Las correlaciones de convección/condensación y las propiedades de los fluidos implementadas en este proyecto están basadas en apuntes universitarios que a su vez las recopilan de la siguiente referencia:
 
 > Fernández Seara, J.; Rodríguez Alonso, C.; Uhía Vizoso, F. J.; Sieres Atienza, J. *Coeficientes de convección en casos prácticos. Correlaciones y programa de cálculo.* Editorial Ciencia 3, Madrid.
+
+## Author
+
+Developed by Luis Fernández Sotelo.
+
+## Copyright
+
+Copyright (C) 2026 Luis Fernández Sotelo
+
+## License
+
+This project is licensed under the GNU General Public License v3.0.
+See the LICENSE file for details.
