@@ -42,9 +42,11 @@ El programa guía al usuario paso a paso:
 
 ## Bibliografía
 
-Las correlaciones de convección/condensación y las propiedades de los fluidos implementadas en este proyecto están basadas en apuntes universitarios que a su vez las recopilan de la siguiente referencia:
+Las correlaciones de convección/condensación y las propiedades de los fluidos implementadas en este proyecto están basadas en apuntes universitarios. Dichos apuntes, a su vez, se basan en la siguiente referencia, que recopila las correlaciones originales de la literatura científica de transferencia de calor:
 
 > Fernández Seara, J.; Rodríguez Alonso, C.; Uhía Vizoso, F. J.; Sieres Atienza, J. *Coeficientes de convección en casos prácticos. Correlaciones y programa de cálculo.* Editorial Ciencia 3, Madrid.
+
+Para las referencias originales de cada correlación (los autores que las desarrollaron), consulta la bibliografía citada en dicha obra.
 
 ## Author
 
